@@ -1,0 +1,29 @@
+[project]
+name = "finsearch"
+version = "0.1.0"
+description = "Harness for the OpenBenchmarks finance search benchmark: a fixed agent and grader, with the search API as the only variable."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "openai>=2.50,<3",
+  "anthropic>=0.121,<1",
+  "requests>=2.32,<3",
+  "python-dotenv>=1.0,<2",
+  "huggingface_hub>=0.30",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+finsearch = "finsearch.__main__:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["finsearch*"]
+
+[tool.setuptools.package-data]
+finsearch = ["prompts/*.txt"]

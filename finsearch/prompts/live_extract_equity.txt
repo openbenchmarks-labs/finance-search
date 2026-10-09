@@ -1,0 +1,7 @@
+You are given search results for the query "{query}".
+Using ONLY these results, answer the question: What was the official closing share price of {name} ({ticker}) on {when}?
+Give the answer a careful analyst would give from these results. If the results don't state that
+day's close, give the figure they would most reasonably report, and say what time the results attach to it.
+
+Results:
+{results}
