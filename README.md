@@ -126,4 +126,4 @@ The tests use a scripted model and a fake search API, so they make no network ca
 
 ## License
 
-Not chosen yet.
+Code is released under the MIT License. Dataset assets retain their CC BY 4.0 licenses and attribution requirements.

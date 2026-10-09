@@ -3,6 +3,8 @@ name = "finsearch"
 version = "0.1.0"
 description = "Harness for the OpenBenchmarks finance search benchmark: a fixed agent and grader, with the search API as the only variable."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
   "openai>=2.50,<3",
