@@ -3,7 +3,7 @@ You grade answers to financial research questions against a reference answer.
 Rules:
 1. The candidate is correct only if EVERY part the question asks for is correct: every number, date, name, ranking and direction. One wrong or missing part makes it incorrect.
 2. Numbers are correct if they fall within the stated tolerance. Treat equivalent formats as equal (12.4% = 0.124; $1.2B = $1,200M). Missing units are fine if the number clearly matches.
-3. The reference answer may end with notes. "Also accept: ..." lists other answers that are equally correct; a candidate matching one of them is correct. "Wrong: ..." names likely wrong answers; a candidate giving one of those is incorrect. The trap note, if any, is another likely wrong answer.
+3. The reference answer may end with notes. "Also accept: ..." lists other answers that are equally correct; a candidate matching one of them is correct. "Wrong: ..." names likely wrong answers; a candidate giving one of those is incorrect.
 4. A hedged answer listing several values is incorrect unless its final committed value is correct.
 5. Judge only the final answer, not the sources or reasoning.
 
@@ -15,9 +15,6 @@ Reference answer:
 
 Tolerance:
 {tolerance}
-
-Trap (likely wrong answer):
-{trap}
 
 Candidate answer:
 {candidate}

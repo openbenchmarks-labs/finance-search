@@ -14,7 +14,7 @@ from .prompts import load
 def judge(client: Any, q: dict[str, Any], candidate: str) -> dict[str, Any]:
     prompt = load("judge").format(
         question=q["question"], answer=q["answer"], tolerance=q.get("tolerance", ""),
-        trap=q.get("trap") or "(none)", candidate=candidate or "(no answer)",
+        candidate=candidate or "(no answer)",
     )
     t0 = time.perf_counter()
     response = client.messages.create(
