@@ -38,9 +38,6 @@ deployment names differ from the model names. Costs are always priced as the ref
 finsearch vendors                                         # the search APIs and the key each needs
 finsearch run --vendors exa_instant --limit 2 --repeats 1 # smoke test: 2 questions per task
 finsearch run --vendors exa_instant,tavily,parallel_basic  # full public sample, 3 repeats
-finsearch run --resume runs/20261009-101500               # continue a stopped run
-finsearch rejudge runs/20261009-101500                    # re-grade rows whose judge call failed
-finsearch summary runs/20261009-101500                    # rebuild summary.md
 ```
 
 `--data` picks the questions: `hf:<owner>/<name>[@revision]` (default `hf:openbenchmarks/OB-Finance-Search`),
