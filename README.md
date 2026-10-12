@@ -40,7 +40,7 @@ finsearch run --vendors exa_instant --limit 2 --repeats 1 # smoke test: 2 questi
 finsearch run --vendors exa_instant,tavily,parallel_basic  # full public sample, 3 repeats
 ```
 
-`--data` picks the questions: `hf:<owner>/<name>[@revision]` (default `hf:openbenchmarks/OB-Finance-Search`),
+`--data` picks the questions: `hf:<owner>/<name>[@revision]` (default `hf:openbenchmarks/OB-FinSearch`),
 a local folder holding `historical-lookup.jsonl` and `multi-hop-lookup.jsonl`, or a single `.jsonl` file whose
 rows carry `search: single|multi`.
 
