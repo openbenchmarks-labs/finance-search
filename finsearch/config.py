@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 
 # Hugging Face dataset repo holding the public sample. Override with --data.
-DATASET_REPO = os.environ.get("FINSEARCH_DATASET_REPO", "openbenchmarks/OB-Finance-Search")
+DATASET_REPO = os.environ.get("FINSEARCH_DATASET_REPO", "openbenchmarks/OB-FinSearch")
 CONFIGS = {"historical-lookup": "single", "multi-hop-lookup": "multi"}   # dataset config -> search class
 
 # One budget per search class, each on its own model and reasoning effort.
