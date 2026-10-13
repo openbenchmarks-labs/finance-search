@@ -87,6 +87,13 @@ def extract(llm, r: dict, cfg: dict, tries: int = 3) -> dict:
     return {}
 
 
+def extract_cost(ex: dict) -> float:
+    """What the extraction call cost, priced as the reference model (see config.PRICES)."""
+    u = ex.get("_usage") or {}
+    return round(config.llm_cost(config.REFERENCE_MODELS["multi"][0], u.get("input") or 0, u.get("cached_input") or 0,
+                                 u.get("output") or 0), 6)
+
+
 def _price(ex: dict) -> float | None:
     try:
         return float(ex["price"]) if ex.get("price") is not None else None
@@ -206,7 +213,8 @@ def grade(run_dir: Path, assets: tuple[str, ...] = ("equity", "crypto"), close_s
                           | {"sent_after_target_s": round(r["t_sent"] - datetime.fromisoformat(
                               cfg["close"] if asset == "equity" else cfg["target"]).timestamp(), 2),
                              "stated_time": ex.get("stated_time"), "price_type": ex.get("price_type"),
-                             "source_url": ex.get("source_url")} | g)
+                             "source_url": ex.get("source_url"), "vendor_cost_usd": r.get("vendor_cost_usd") or 0.0,
+                             "extract_cost_usd": extract_cost(ex)} | g)
     if not graded:
         raise SystemExit("nothing graded yet")
     (run_dir / "graded.jsonl").write_text("".join(json.dumps(g, default=str) + "\n" for g in graded))
@@ -257,6 +265,16 @@ def write_live_summary(run_dir: Path, graded: list[dict]) -> Path:
     missing = sorted({x["ticker"] for x in graded if not x["key_available"]})
     if missing:
         lines += [f"No answer key for {', '.join(missing)} (left out above).", ""]
+    cost: dict = defaultdict(lambda: [0.0, 0.0])
+    for x in graded:
+        cost[x["vendor"]][0] += x.get("extract_cost_usd") or 0.0
+        cost[x["vendor"]][1] += x.get("vendor_cost_usd") or 0.0
+    lines += ["## Cost (USD)", "", f"Extraction is {EXTRACT_MODEL} priced as the reference model; search API is the "
+              "vendor's per-call price.", "", "| Vendor | Extraction | Search API | Total |", "|---|---|---|---|"]
+    for v in sorted(cost):
+        e, s = cost[v]
+        lines.append(f"| {v} | ${e:.2f} | ${s:.2f} | ${e + s:.2f} |")
+    lines.append("")
     path = run_dir / "summary.md"
     path.write_text("\n".join(lines))
     return path

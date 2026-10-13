@@ -39,3 +39,12 @@ def test_live_items_reject_unknown_assets(tmp_path):
     _write(f, [{"id": "x", "asset": "fx", "name": "EUR", "ticker": "EUR", "query_template": "q"}])
     with pytest.raises(ValueError):
         load_live_items(str(tmp_path))
+
+
+def test_live_items_need_a_query_template(tmp_path):
+    f = tmp_path / "live-lookup.jsonl"
+    _write(f, [{"id": "x", "asset": "crypto", "name": "XRP", "ticker": "XRP"}])
+    with pytest.raises(ValueError, match="query_template"):
+        load_live_items(str(tmp_path))
+    _write(f, [{"id": "x", "asset": "crypto", "name": "XRP", "ticker": "XRP", "query_template": "{{date}}"}])
+    assert load_live_items(str(tmp_path))[0]["ticker"] == "XRP"

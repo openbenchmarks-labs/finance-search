@@ -83,4 +83,7 @@ def load_live_items(data: str = "") -> list[dict]:
     for r in rows:
         if r.get("asset") not in ("equity", "crypto"):
             raise ValueError(f"{path}: live item {r.get('id')} has asset {r.get('asset')!r}; expected equity or crypto")
+        missing = [k for k in ("id", "name", "ticker", "query_template") if not r.get(k)]
+        if missing:
+            raise ValueError(f"{path}: live item {r.get('id')} is missing {', '.join(missing)}")
     return rows

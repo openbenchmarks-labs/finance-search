@@ -10,7 +10,7 @@ the grader are fixed. The search API is the only thing that changes between runs
 |---|---|---|---|
 | Historical lookup | 1 search | gpt-5.6-luna, reasoning effort high | One published figure for a named entity and period. |
 | Multi-hop lookup | up to 5 searches | gpt-5.6-sol, reasoning effort medium | Several published facts combined: a peer ranking, a trend, a result against guidance. |
-| Live lookup | 1 query per item and delay | none (gpt-5.6-sol reads the price out of the results) | A stock's official close or a coin's price, asked seconds to hours after the moment. |
+| Live lookup | 1 query per item and delay | none (gpt-5.6-sol reads the price out of the results) | A stock's official close or a coin's price, asked seconds to hours post hoc. |
 
 For the first two tasks the agent sees only the question, today's date and its budget. It gets the search
 API's results (url, title, snippet) as tool output and must answer from them alone. Page fetching is off on the board (`--mode search`).
@@ -28,9 +28,7 @@ pip install -e .
 cp .env.example .env              # then fill in the keys you need
 ```
 
-The agent runs on any endpoint that serves the OpenAI Responses API with reasoning items. Set
-`OPENAI_BASE_URL` for Azure or another gateway, and `FINSEARCH_SINGLE_MODEL` / `FINSEARCH_MULTI_MODEL` if your
-deployment names differ from the model names. Costs are always priced as the reference models.
+The agent runs on the OpenAI API with `OPENAI_API_KEY`, using the Responses API with reasoning items.
 
 ## Run
 

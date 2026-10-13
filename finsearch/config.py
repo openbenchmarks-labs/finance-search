@@ -14,8 +14,7 @@ CONFIGS = {"historical-lookup": "single", "multi-hop-lookup": "multi"}   # datas
 
 # One budget per search class, each on its own model and reasoning effort.
 # mode "search" (the board): searches only. mode "search_fetch": adds a page-fetch budget.
-# The env overrides are for deployment names that differ from the model name (e.g. on Azure);
-# costs are always priced as the reference model.
+# The env overrides let a run name a different model; costs are always priced as the reference model.
 REFERENCE_MODELS = {"single": ("gpt-5.6-luna", "high"), "multi": ("gpt-5.6-sol", "medium")}
 CLASS_MODELS = {
     "single": (os.environ.get("FINSEARCH_SINGLE_MODEL", "gpt-5.6-luna"), "high"),

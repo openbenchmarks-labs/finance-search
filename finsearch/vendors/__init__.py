@@ -39,7 +39,11 @@ def get(key: str) -> Adapter:
     return REGISTRY[key]
 
 
-def search(key: str, query: str, *, max_results: int = 10) -> VendorCall:
+def search(key: str, query: str, *, max_results: int = 10, live: bool = False) -> VendorCall:
+    """live=True only from live lookup: adapters may switch on freshness options there (see Adapter).
+    The flag is passed only when set, so an adapter that overrides search() without it still works."""
+    if live:
+        return get(key).search(query, max_results=max_results, live=True)
     return get(key).search(query, max_results=max_results)
 
 

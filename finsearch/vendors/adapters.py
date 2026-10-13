@@ -2,6 +2,11 @@
 
 Each config is one Adapter instance. Requests ask for 10 results; costs are list prices per call unless the
 response reports its own cost.
+
+Live lookup (the freshness task) calls two of them differently, through the live_* hooks: Tako is asked for
+its `data` source as well as `web`, so its price cards come back and are placed ahead of the web results;
+Exa is called with `livecrawl: always`, so highlights come from a fresh crawl rather than a cached copy.
+Historical and multi-hop lookup use search_request as is.
 """
 
 from __future__ import annotations
@@ -31,6 +36,13 @@ class Exa(Adapter):
                            {"query": query, "type": self.kind, "numResults": max_results,
                             "contents": {"highlights": True}},
                            timeout=120 if self.kind == "deep" else 60)
+
+    def live_search_request(self, query, max_results):
+        """Live lookup: a fresh crawl of each result page instead of Exa's cached copy."""
+        return HttpRequest("POST", "https://api.exa.ai/search", _json_headers(**{"x-api-key": env("EXA_API_KEY")}),
+                           {"query": query, "type": self.kind, "numResults": max_results,
+                            "contents": {"highlights": True, "livecrawl": "always"}},
+                           timeout=120)
 
     def parse_hits(self, payload, max_results):
         hits = []
@@ -274,6 +286,16 @@ class Tako(Adapter):
                            {"source_name": i.get("source_name"), "publish_date": i.get("publish_date")})
                        for i in payload.get("web_results") or []], max_results)
 
+    def live_search_request(self, query, max_results):
+        """Live lookup: the `data` source too, so Tako's curated price cards come back with the web results."""
+        return HttpRequest("POST", "https://tako.com/api/v3/search", _json_headers(**{"X-API-Key": env("TAKO_API_KEY")}),
+                           {"query": query, "effort": "fast",
+                            "sources": {"data": {"count": 5, "include_contents": True},
+                                        "web": {"count": min(max_results, 20), "highlights": True}}})
+
+    def live_parse_hits(self, payload, max_results):
+        return card_hits(payload) + self.parse_hits(payload, max_results)
+
     def fetch_request(self, url, objective, max_chars):
         return HttpRequest("POST", "https://tako.com/api/v1/contents", _json_headers(**{"X-API-Key": env("TAKO_API_KEY")}),
                            {"url": url, "mode": "inline", "max_chars": max_chars}, timeout=120)
@@ -281,6 +303,32 @@ class Tako(Adapter):
     def parse_page(self, payload, url):
         item = ((payload or {}).get("contents") or [{}])[0]
         return item.get("data") or "", item.get("source_url") or url, ""
+
+
+CARD_URL = "tako://card"   # Tako cards are data, not a page to fetch
+
+
+def card_hits(payload: Any) -> list[dict[str, Any]]:
+    """Tako data cards as hits: the description, the source, and the last rows of the card's dataset."""
+    cards = payload.get("cards") if isinstance(payload, dict) else None
+    hits = []
+    for i, c in enumerate(cards or []):
+        if not isinstance(c, dict):
+            continue
+        parts = [str(c.get("description") or "").strip(), str(c.get("semantic_description") or "").strip()]
+        content = c.get("content") if isinstance(c.get("content"), dict) else {}
+        ds = content.get("dataset") if isinstance(content.get("dataset"), dict) else {}
+        cols = [str(x.get("name") if isinstance(x, dict) else x) for x in ds.get("columns") or []]
+        rows = ds.get("rows") or []
+        if cols and rows:
+            parts.append("Latest data rows (" + " | ".join(cols) + "): "
+                         + "; ".join(" | ".join(str(v) for v in r) for r in rows[-5:] if isinstance(r, list)))
+        parts.append("(Tako data card; not a web page, cannot be fetched.)")
+        snippet = " ".join(p for p in parts if p)
+        if snippet:
+            hits.append(hit(c.get("webpage_url") or f"{CARD_URL}/{i}", c.get("title") or "Tako data card", snippet,
+                            {"kind": "card", "card_id": c.get("card_id"), "n_rows": len(rows)}))
+    return hits
 
 
 # --------------------------------------------------------------------------- TinyFish
@@ -319,7 +367,7 @@ class Perplexity(Adapter):
     def search_request(self, query, max_results):
         return HttpRequest("POST", "https://api.perplexity.ai/search",
                            _json_headers(Authorization=f"Bearer {env('PERPLEXITY_API_KEY')}"),
-                           {"query": query, "max_results": min(max_results, 20), "search_context_size": "high"})
+                           {"query": query, "max_results": min(max_results, 20), "search_context_size": "low"})
 
     def parse_hits(self, payload, max_results):
         return dedupe([hit(i.get("url"), i.get("title"), i.get("snippet"),
