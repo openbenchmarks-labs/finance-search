@@ -367,7 +367,7 @@ class Perplexity(Adapter):
     def search_request(self, query, max_results):
         return HttpRequest("POST", "https://api.perplexity.ai/search",
                            _json_headers(Authorization=f"Bearer {env('PERPLEXITY_API_KEY')}"),
-                           {"query": query, "max_results": min(max_results, 20), "search_context_size": "low"})
+                           {"query": query, "max_results": min(max_results, 20), "search_context_size": "high"})
 
     def parse_hits(self, payload, max_results):
         return dedupe([hit(i.get("url"), i.get("title"), i.get("snippet"),
