@@ -76,3 +76,14 @@ def test_file_close_source(tmp_path):
 def test_plugged_close_source():
     src = keys.close_source("7,6", "finsearch.live.keys:MockCloseSource")
     assert src.closes(["A"], date(2026, 10, 7))["A"] == {"close": 7.0, "prior_close": 6.0}
+
+
+def test_summary_reports_extraction_and_vendor_cost(tmp_path):
+    ex = {"_usage": {"input": 1_000_000, "cached_input": 0, "output": 100_000}}   # $4 + $2 at the Sol reference price
+    assert grade.extract_cost(ex) == 6.0 and grade.extract_cost({}) == 0.0
+    graded = [{"asset": "crypto", "vendor": "v", "offset_s": 5, "ticker": "XRP", "class": "target", "correct": True,
+               "key_available": True, "latency_ms": 100, "extract_cost_usd": 6.0, "vendor_cost_usd": 0.5},
+              {"asset": "crypto", "vendor": "v", "offset_s": 30, "ticker": "XRP", "class": "stale", "correct": False,
+               "key_available": True, "latency_ms": 100, "extract_cost_usd": 1.0, "vendor_cost_usd": 0.5}]
+    text = grade.write_live_summary(tmp_path, graded).read_text()
+    assert "| v | $7.00 | $1.00 | $8.00 |" in text and "| v | 100% | 0% | 50% |" in text

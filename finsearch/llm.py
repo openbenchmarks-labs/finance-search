@@ -7,8 +7,7 @@ from typing import Any
 
 
 def agent_client(timeout: int = 240) -> Any:
-    """OpenAI client for the agent. Reads OPENAI_API_KEY and, if set, OPENAI_BASE_URL (e.g. an Azure
-    OpenAI v1 endpoint). The endpoint must serve the Responses API with reasoning items."""
+    """OpenAI client for the agent, from OPENAI_API_KEY. Uses the Responses API with reasoning items."""
     from openai import OpenAI
 
     if not os.environ.get("OPENAI_API_KEY"):

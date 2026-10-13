@@ -143,7 +143,7 @@ def _call(vendor: str, query: str, base: dict) -> dict:
     try:
         sent = time.time()
         try:
-            vc = vendors.search(vendor, query, max_results=10)
+            vc = vendors.search(vendor, query, max_results=10, live=True)   # live hooks: Tako data cards, Exa live crawl
             status, error, hits, cost = vc.status, vc.error, vc.hits or [], vc.cost_usd
         except Exception as exc:  # noqa: BLE001
             status, error, hits, cost = "error", str(exc)[:300], [], None

@@ -166,6 +166,16 @@ class Adapter:
     def parse_hits(self, payload: dict[str, Any], max_results: int) -> list[dict[str, Any]]:
         raise NotImplementedError
 
+    # --- live lookup (optional) ---
+    def live_search_request(self, query: str, max_results: int) -> HttpRequest:
+        """The request live lookup sends. By default the same as search_request. Override it to switch on a
+        vendor's freshness options (a live crawl, a data source) for live lookup only: historical and
+        multi-hop lookup never call it, so their boards are unaffected."""
+        return self.search_request(query, max_results)
+
+    def live_parse_hits(self, payload: dict[str, Any], max_results: int) -> list[dict[str, Any]]:
+        return self.parse_hits(payload, max_results)
+
     # --- fetch (optional) ---
     def fetch_request(self, url: str, objective: str, max_chars: int) -> HttpRequest:
         raise NotImplementedError
@@ -178,11 +188,12 @@ class Adapter:
     def fetch_cost(self) -> float | None:
         return self.fetch_unit_cost_usd
 
-    def search(self, query: str, *, max_results: int = 10) -> VendorCall:
-        call = send(self.search_request(query, max_results))
+    def search(self, query: str, *, max_results: int = 10, live: bool = False) -> VendorCall:
+        """live=True is live lookup: the live_* hooks are used instead of search_request / parse_hits."""
+        call = send(self.live_search_request(query, max_results) if live else self.search_request(query, max_results))
         if call.status == "ok":
             payload = call.raw_response if isinstance(call.raw_response, dict) else {}
-            call.hits = self.parse_hits(payload, max_results)
+            call.hits = self.live_parse_hits(payload, max_results) if live else self.parse_hits(payload, max_results)
             reported = reported_cost(call.raw_response)
             call.cost_usd = reported if reported is not None else self.search_unit_cost_usd
         else:
