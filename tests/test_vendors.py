@@ -83,27 +83,28 @@ def _scripted(monkeypatch, replies):
     return sent
 
 
-def test_keenable_arms_are_on_the_board_and_share_one_rate_limit():
+def test_keenable_is_one_arm_on_the_board():
     from finsearch.live import collect
-    assert {"keenable_pro", "keenable_realtime"} <= set(vendors.BOARD_VENDORS)
-    assert vendors.required_env(["keenable_pro", "keenable_realtime"]) == ["KEENABLE_API_KEY"]
-    assert collect.limit_for("keenable_pro") is collect.limit_for("keenable_realtime")
+    assert "keenable" in vendors.BOARD_VENDORS
+    assert not any(v.startswith("keenable_") for v in vendors.BOARD_VENDORS)
+    assert vendors.get("keenable").provider == "Keenable"
+    assert vendors.required_env(["keenable"]) == ["KEENABLE_API_KEY"]
     assert collect.LIMITS["keenable"] == {"rps": 8, "concurrent": 8}
+    assert collect.limit_for("keenable") is collect.limit_for("keenable")
 
 
 def test_keenable_search_request_contract(monkeypatch):
     monkeypatch.setenv("KEENABLE_API_KEY", "k-secret")
-    for mode in ("pro", "realtime"):
-        req = vendors.get(f"keenable_{mode}").search_request("AAPL close 2026-10-07", 10)
-        assert (req.method, req.url) == ("POST", "https://api.keenable.ai/v1/search")
-        assert req.headers == {"X-API-Key": "k-secret", "Content-Type": "application/json"}
-        assert req.body == {"query": "AAPL close 2026-10-07", "mode": mode, "max_results": 10}
-    assert vendors.get("keenable_pro").search_request("q", 80).body["max_results"] == 50
-    assert vendors.get("keenable_pro").search_request("q", 0).body["max_results"] == 1
+    req = vendors.get("keenable").search_request("AAPL close 2026-10-07", 10)
+    assert (req.method, req.url) == ("POST", "https://api.keenable.ai/v1/search")
+    assert req.headers == {"X-API-Key": "k-secret", "Content-Type": "application/json"}
+    assert req.body == {"query": "AAPL close 2026-10-07", "mode": "pro", "max_results": 10}
+    assert vendors.get("keenable").search_request("q", 80).body["max_results"] == 50
+    assert vendors.get("keenable").search_request("q", 0).body["max_results"] == 1
 
 
 def test_keenable_parse_hits_prefers_snippet_and_dedupes():
-    k = vendors.get("keenable_pro")
+    k = vendors.get("keenable")
     payload = {"results": [
         {"title": "A", "url": "https://a.example/", "description": "", "snippet": "long snippet",
          "published_at": "2026-10-07"},
@@ -123,46 +124,31 @@ def test_keenable_parse_hits_prefers_snippet_and_dedupes():
 def test_keenable_search_cost_uses_credits_else_list_price(monkeypatch):
     _scripted(monkeypatch, [_reply(200, {"results": [], "usage": {"credits": 2}}), _reply(200, {"results": []}),
                             _reply(500, {"error": "boom"})])
-    assert vendors.search("keenable_pro", "q").cost_usd == 0.008
-    assert vendors.search("keenable_realtime", "q").cost_usd == 0.004
-    assert vendors.search("keenable_pro", "q").cost_usd == 0.0
-    k = vendors.get("keenable_pro")
+    assert vendors.search("keenable", "q").cost_usd == 0.008
+    assert vendors.search("keenable", "q").cost_usd == 0.004
+    assert vendors.search("keenable", "q").cost_usd == 0.0
+    k = vendors.get("keenable")
     assert k.reported_cost({"usage": {"credits": True}}) is None
     assert k.reported_cost({"usage": {"credits": "2"}}) is None and k.reported_cost(None) is None
 
 
-def test_keenable_fetch_indexed_copy_needs_no_live_retry(monkeypatch):
+def test_keenable_fetch_reads_the_indexed_copy(monkeypatch):
     sent = _scripted(monkeypatch, [_reply(200, {"url": "https://a.example/", "title": "A", "content": "page text",
                                                 "published_at": 1791331200})])
-    vc = vendors.fetch("keenable_pro", "https://a.example/", objective="o", max_chars=30000)
+    vc = vendors.fetch("keenable", "https://a.example/", objective="o", max_chars=30000)
     assert vc.status == "ok" and vc.page["text"] == "page text" and vc.page["title"] == "A"
     assert len(sent) == 1 and (sent[0].method, sent[0].url) == ("GET", "https://api.keenable.ai/v1/fetch")
     assert sent[0].params == {"url": "https://a.example/", "max_chars": 30000, "live": "false"}
-    assert vc.cost_usd == 0.004 and [a["live"] for a in vc.attempts] == [False]
+    assert vc.cost_usd == 0.004
 
 
-def test_keenable_fetch_retries_live_once_on_404_or_empty(monkeypatch):
-    for first in (_reply(404, {"detail": "not indexed"}), _reply(200, {"url": "https://a.example/", "content": ""})):
-        sent = _scripted(monkeypatch, [first, _reply(200, {"content": "live text", "usage": {"credits": 1}})])
-        vc = vendors.fetch("keenable_realtime", "https://a.example/", objective="o", max_chars=100)
-        assert vc.status == "ok" and vc.page["text"] == "live text"
-        assert [r.params["live"] for r in sent] == ["false", "true"]
-        assert [(a["status_code"], a["live"]) for a in vc.attempts] == [(first.attempts[0]["status_code"], False),
-                                                                         (200, True)]
-        assert vc.cost_usd == 0.004   # the failed indexed attempt costs nothing
-
-
-def test_keenable_fetch_both_attempts_fail(monkeypatch):
-    sent = _scripted(monkeypatch, [_reply(422, {"detail": "bad"}), _reply(404, {"detail": "gone"})])
-    vc = vendors.fetch("keenable_pro", "https://a.example/", objective="o", max_chars=100)
-    assert vc.status == "error" and vc.page is None and vc.cost_usd == 0.0 and len(sent) == 2
-    assert [a["live"] for a in vc.attempts] == [False, True]
-
-
-def test_keenable_fetch_no_live_retry_on_other_errors(monkeypatch):
-    sent = _scripted(monkeypatch, [_reply(401, {"detail": "bad key"})])
-    vc = vendors.fetch("keenable_pro", "https://a.example/", objective="o", max_chars=100)
-    assert vc.status == "error" and len(sent) == 1
+def test_keenable_fetch_not_indexed_or_empty_is_a_failed_fetch(monkeypatch):
+    for reply in (_reply(404, {"detail": "not indexed"}), _reply(200, {"url": "https://a.example/", "content": ""}),
+                  _reply(401, {"detail": "bad key"})):
+        sent = _scripted(monkeypatch, [reply])
+        vc = vendors.fetch("keenable", "https://a.example/", objective="o", max_chars=100)
+        assert vc.status == "error" and vc.page is None and vc.cost_usd == 0.0
+        assert len(sent) == 1 and sent[0].params["live"] == "false"
 
 
 def test_api_key_headers_are_redacted():

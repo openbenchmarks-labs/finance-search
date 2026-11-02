@@ -209,11 +209,7 @@ class Adapter:
             return VendorCall("unavailable", 0, {"url": url, "vendor": self.key}, None,
                               "this search API has no native page fetch", [], None)
         assert_public_url(url)
-        return self.send_fetch(self.fetch_request(url, objective, max_chars), url, max_chars)
-
-    def send_fetch(self, req: HttpRequest, url: str, max_chars: int) -> VendorCall:
-        """Send one fetch request and turn the response into a page, an error, and a cost."""
-        call = send(req)
+        call = send(self.fetch_request(url, objective, max_chars))
         if call.status == "ok":
             try:
                 text, final_url, title = self.parse_page(call.raw_response, url)
