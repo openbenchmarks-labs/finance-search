@@ -188,13 +188,17 @@ class Adapter:
     def fetch_cost(self) -> float | None:
         return self.fetch_unit_cost_usd
 
+    def reported_cost(self, payload: Any) -> float | None:
+        """The call's cost as the response reports it, or None to use the list price."""
+        return reported_cost(payload)
+
     def search(self, query: str, *, max_results: int = 10, live: bool = False) -> VendorCall:
         """live=True is live lookup: the live_* hooks are used instead of search_request / parse_hits."""
         call = send(self.live_search_request(query, max_results) if live else self.search_request(query, max_results))
         if call.status == "ok":
             payload = call.raw_response if isinstance(call.raw_response, dict) else {}
             call.hits = self.live_parse_hits(payload, max_results) if live else self.parse_hits(payload, max_results)
-            reported = reported_cost(call.raw_response)
+            reported = self.reported_cost(call.raw_response)
             call.cost_usd = reported if reported is not None else self.search_unit_cost_usd
         else:
             call.hits, call.cost_usd = [], 0.0
@@ -215,6 +219,6 @@ class Adapter:
                              "text": str(text)[:max_chars], "truncated": len(str(text)) > max_chars}
             except Exception as exc:  # noqa: BLE001
                 call.status, call.error = "error", f"{type(exc).__name__}: {exc}"
-        reported = reported_cost(call.raw_response)
+        reported = self.reported_cost(call.raw_response)
         call.cost_usd = (reported if reported is not None else self.fetch_cost()) if call.status == "ok" else 0.0
         return call

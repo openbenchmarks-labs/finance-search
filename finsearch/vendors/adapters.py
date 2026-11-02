@@ -358,6 +358,46 @@ class TinyFish(Adapter):
         return item.get("text") or "", item.get("final_url") or item.get("url") or url, item.get("title") or ""
 
 
+# --------------------------------------------------------------------------- Keenable
+KEENABLE_USD_PER_CREDIT = 0.004   # $4 per 1,000 requests, keenable.ai/pricing (checked 2026-11-02)
+
+
+class Keenable(Adapter):
+    """Keenable search in `pro` mode (its standard index-based config). Fetch reads Keenable's indexed copy
+    (GET /v1/fetch, live=false); a page that is not indexed or comes back empty is a failed fetch."""
+    key, provider = "keenable", "Keenable"
+    env_keys = ("KEENABLE_API_KEY",)
+    native_fetch = True
+    search_unit_cost_usd = KEENABLE_USD_PER_CREDIT
+    fetch_unit_cost_usd = KEENABLE_USD_PER_CREDIT
+
+    def reported_cost(self, payload):
+        usage = payload.get("usage") if isinstance(payload, dict) else None
+        credits = usage.get("credits") if isinstance(usage, dict) else None
+        if isinstance(credits, bool) or not isinstance(credits, (int, float)) or credits < 0:
+            return None
+        return credits * KEENABLE_USD_PER_CREDIT
+
+    def search_request(self, query, max_results):
+        return HttpRequest("POST", "https://api.keenable.ai/v1/search",
+                           _json_headers(**{"X-API-Key": env("KEENABLE_API_KEY")}),
+                           {"query": query, "mode": "pro", "max_results": max(1, min(max_results, 50))})
+
+    def parse_hits(self, payload, max_results):
+        rows = payload.get("results") if isinstance(payload, dict) else None
+        return dedupe([hit(r.get("url"), r.get("title"), r.get("snippet") or r.get("description"),
+                           {"published_at": r.get("published_at"), "acquired_at": r.get("acquired_at")})
+                       for r in (rows if isinstance(rows, list) else []) if isinstance(r, dict)], max_results)
+
+    def fetch_request(self, url, objective, max_chars):
+        return HttpRequest("GET", "https://api.keenable.ai/v1/fetch", {"X-API-Key": env("KEENABLE_API_KEY")},
+                           params={"url": url, "max_chars": int(max_chars), "live": "false"})
+
+    def parse_page(self, payload, url):
+        item = payload if isinstance(payload, dict) else {}
+        return item.get("content") or "", item.get("url") or url, item.get("title") or ""
+
+
 # --------------------------------------------------------------------------- search-only APIs
 class Perplexity(Adapter):
     key, provider = "perplexity", "Perplexity"
@@ -413,5 +453,5 @@ def board_adapters() -> list[Adapter]:
         You(core=False), You(core=True),
         Tavily("tavily", "advanced", 0.016, {"chunks_per_source": 3}), Tavily("tavily_basic", "basic", 0.008),
         Nimble("standard", 0.005), Nimble("lite", 0.0011),
-        Firecrawl(), Tako(), TinyFish(), Perplexity(), Brave(), Serp(),
+        Firecrawl(), Tako(), TinyFish(), Keenable(), Perplexity(), Brave(), Serp(),
     ]

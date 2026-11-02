@@ -84,7 +84,7 @@ source with `--close-source` / `--coin-source module:ClassName`.
 
 ## Adding a search API
 
-Subclass `Adapter` in [finsearch/vendors/base.py](finsearch/vendors/base.py). Build the HTTP request for a query and turn the response into hits. Add the fetch pair too if the API can extract a page. The 17 adapters in [finsearch/vendors/adapters.py](finsearch/vendors/adapters.py) are working examples.
+Subclass `Adapter` in [finsearch/vendors/base.py](finsearch/vendors/base.py). Build the HTTP request for a query and turn the response into hits. Add the fetch pair too if the API can extract a page. The 18 adapters in [finsearch/vendors/adapters.py](finsearch/vendors/adapters.py) are working examples.
 
 ```python
 from finsearch.vendors import Adapter, HttpRequest, dedupe, hit, register
@@ -110,6 +110,16 @@ finsearch --vendor-module my_acme run --vendors acme
 ```
 
 Keep the request at the API's defaults unless a setting is part of the configuration you want ranked. Return the API's own text as the snippet, with nothing summarised or rewritten on your side.
+
+### Keenable
+
+`keenable` calls `POST https://api.keenable.ai/v1/search` with `mode: pro` and 10 results, at the API's default
+snippet length; the snippet is the evidence text, with the description as a fallback. Fetch (`--mode search_fetch`)
+returns Keenable's indexed copy of the page (`GET /v1/fetch`); a page that isn't indexed or comes back empty counts as
+a failed fetch, as for any other API. It uses `KEENABLE_API_KEY` (live lookup paces it at 8 requests/s, under
+Keenable's 10/s per organization). Cost is $4 per 1,000 requests
+([keenable.ai/pricing](https://keenable.ai/pricing), checked 2026-11-02), i.e. $0.004 per search and per fetch,
+or the response's `usage.credits` at that rate. Results are pending: no scored run yet.
 
 ## Tests
 

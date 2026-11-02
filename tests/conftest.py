@@ -1,4 +1,4 @@
 import os
 
-for k in ["EXA_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]:
+for k in ["EXA_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "KEENABLE_API_KEY"]:
     os.environ.setdefault(k, "test")
