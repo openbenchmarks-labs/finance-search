@@ -4,8 +4,8 @@ Stocks are asked for the official close of --date (16:00 New York time, 13:00 on
 for the price at the --target minute (UTC). At target + each delay every item is sent once to every vendor;
 each row keeps its actual send time, so a late batch is graded by when it was really sent.
 
-Calls are paced per API key, not per config: configs that share a key (the Exa types, the Parallel modes)
-share one budget, which is how the vendors enforce their limits.
+Calls are paced per API key, not per config: configs that share a key (the Exa types, the Parallel modes,
+the Keenable modes) share one budget, which is how the vendors enforce their limits.
 
 Output: runs/live/<stamp>/ with config.json and raw.jsonl. Grade it with `finsearch live-grade <run dir>`
 once the answer keys cover the run (keys.py).

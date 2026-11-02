@@ -99,6 +99,7 @@ def test_keenable_search_request_contract(monkeypatch):
         assert req.headers == {"X-API-Key": "k-secret", "Content-Type": "application/json"}
         assert req.body == {"query": "AAPL close 2026-10-07", "mode": mode, "max_results": 10}
     assert vendors.get("keenable_pro").search_request("q", 80).body["max_results"] == 50
+    assert vendors.get("keenable_pro").search_request("q", 0).body["max_results"] == 1
 
 
 def test_keenable_parse_hits_prefers_snippet_and_dedupes():
@@ -125,6 +126,9 @@ def test_keenable_search_cost_uses_credits_else_list_price(monkeypatch):
     assert vendors.search("keenable_pro", "q").cost_usd == 0.008
     assert vendors.search("keenable_realtime", "q").cost_usd == 0.004
     assert vendors.search("keenable_pro", "q").cost_usd == 0.0
+    k = vendors.get("keenable_pro")
+    assert k.reported_cost({"usage": {"credits": True}}) is None
+    assert k.reported_cost({"usage": {"credits": "2"}}) is None and k.reported_cost(None) is None
 
 
 def test_keenable_fetch_indexed_copy_needs_no_live_retry(monkeypatch):
