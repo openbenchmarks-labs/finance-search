@@ -54,6 +54,7 @@ LIMITS = {
     "serp": dict(rps=5, concurrent=5),
     "perplexity": dict(rps=5, concurrent=8),
     "tinyfish": dict(per_minute=30, concurrent=2),
+    "keenable": dict(rps=8, concurrent=8),     # Keenable allows 10/s per organization; pro and realtime share it
 }
 
 
